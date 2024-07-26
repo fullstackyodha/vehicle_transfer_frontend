@@ -3,15 +3,14 @@
 import AddIcon from '@mui/icons-material/Add';
 import { Box, Button, TextField } from '@mui/material';
 import Modal from '@mui/material/Modal';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import Link from 'next/link';
+import AssignList from '../_components/AssignList';
 
 const style = {
 	position: 'absolute',
@@ -41,8 +40,6 @@ export default function Transfers() {
 	const [driver, setDriver] = useState('');
 
 	const [vehicleNumber, setVehicleNumber] = useState('');
-
-	const [vehicle_id, setVehicleId] = useState('');
 
 	const [from, setFrom] = useState('');
 
@@ -79,7 +76,16 @@ export default function Transfers() {
 
 				const data = await response.json();
 
-				setVehicleList(data.data.vehicles);
+				let assignedVehicleList = assignedList?.map(
+					(vehicle) => vehicle.vehicleNumber
+				);
+
+				let vehicles = data.data.vehicles?.filter(
+					(vehicle) =>
+						!assignedVehicleList.includes(vehicle.vehicleNumber)
+				);
+
+				setVehicleList(vehicles);
 			} catch (error) {
 				console.error('Error fetching Vehicles:', error);
 			}
@@ -115,6 +121,20 @@ export default function Transfers() {
 	const handleOpenTransfer = () => setOpenTransfer(true);
 	const handleCloseTransfer = () => setOpenTransfer(false);
 
+	if (assignedList.length && searchValue) {
+		assignedList = assignedList.filter((list) => {
+			return (
+				list.vehicleNumber
+					.toLowerCase()
+					.includes(searchValue.toLowerCase()) ||
+				list.vehicleType
+					.toLowerCase()
+					.includes(searchValue.toLowerCase()) ||
+				list.name.toLowerCase().includes(searchValue.toLowerCase())
+			);
+		});
+	}
+
 	const handleAssignVehicle = async (e) => {
 		try {
 			e.preventDefault();
@@ -127,8 +147,8 @@ export default function Transfers() {
 						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({
-						driver_id: driver,
-						vehicle_id: vehicle,
+						driverId: driver,
+						vehicleNumber: vehicle,
 					}),
 				}
 			);
@@ -169,9 +189,9 @@ export default function Transfers() {
 						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({
-						from,
-						to,
-						vehicle_id,
+						fromDriverId: from,
+						toDriverId: to,
+						vehicleNumber: vehicleNumber,
 					}),
 				}
 			);
@@ -183,7 +203,6 @@ export default function Transfers() {
 				});
 			} else {
 				setVehicleNumber('');
-				setVehicleId('');
 				setFrom('');
 				setTo('');
 
@@ -201,6 +220,7 @@ export default function Transfers() {
 			});
 		}
 	};
+
 	return (
 		<Box
 			sx={{
@@ -226,7 +246,7 @@ export default function Transfers() {
 					sx={{ width: '20rem' }}
 				/>
 
-				{/* MODAL */}
+				{/* ASSIGN MODAL */}
 				<div>
 					<Modal
 						open={open}
@@ -305,12 +325,15 @@ export default function Transfers() {
 												onChange={(e) => {
 													setVehicle(e.target.value);
 												}}
+												required
 											>
 												{vehicleList.map(
 													(vehicle, index) => (
 														<MenuItem
 															key={index}
-															value={vehicle.id}
+															value={
+																vehicle.vehicleNumber
+															}
 														>
 															{
 																vehicle.vehicleNumber
@@ -346,7 +369,7 @@ export default function Transfers() {
 				</Button>
 			</Box>
 
-			{/* MODAL */}
+			{/* TRANSFER MODAL */}
 			<div>
 				<Modal
 					open={openTransfer}
@@ -474,129 +497,13 @@ export default function Transfers() {
 			>
 				{assignedList.map((vehicle, index) => {
 					return (
-						<>
-							<Box
-								key={index}
-								sx={{
-									display: 'flex',
-									flexDirection: 'row',
-									justifyContent: 'space-between',
-									alignItems: 'center',
-									width: '80%',
-									padding: '1rem',
-									backgroundColor: '#dcdee0',
-									borderRadius: '10px',
-								}}
-							>
-								<Box sx={{ borderRadius: '10px' }}>
-									<Link
-										href={`/transfers/${vehicle.vehicleNumber}`}
-									>
-										{/* <Image
-											src={vehicleImage}
-											width={75}
-											height={55}
-											alt={'vehicle'}
-										/> */}
-									</Link>
-								</Box>
-								<Box
-									sx={{
-										width: '100%',
-										padding: '0 2rem',
-										display: 'flex',
-										flexDirection: 'row',
-										justifyContent: 'space-between',
-										alignItems: 'center',
-									}}
-								>
-									<Box
-										sx={{
-											fontWeight: 'bold',
-											fontSize: '0.9rem',
-											display: 'flex',
-											flexDirection: 'column',
-											alignItems: 'center',
-											gap: '0.5rem',
-										}}
-									>
-										<Box>Vehicle #</Box>
-										<Box
-											sx={{
-												fontSize: '0.9rem',
-												padding: '0.3rem 0.4rem',
-												borderRadius: '10px',
-												backgroundColor: '#123459',
-												color: 'white',
-											}}
-										>
-											{vehicle.vehicleNumber}
-										</Box>
-									</Box>
-									<Box
-										sx={{
-											fontWeight: 'bold',
-											fontSize: '0.9rem',
-											display: 'flex',
-											flexDirection: 'column',
-											alignItems: 'center',
-											gap: '0.5rem',
-										}}
-									>
-										<Box>Vehicle Type</Box>
-										<Box
-											sx={{
-												fontSize: '0.9rem',
-												padding: '0.3rem 0.4rem',
-												borderRadius: '10px',
-												backgroundColor: '#f54242',
-											}}
-										>
-											{vehicle.vehicleType}
-										</Box>
-									</Box>
-
-									<Box
-										sx={{
-											fontWeight: 'bold',
-											fontSize: '0.9rem',
-											display: 'flex',
-											flexDirection: 'column',
-											alignItems: 'center',
-											gap: '0.5rem',
-										}}
-									>
-										<Box>Current Driver</Box>
-										<Box
-											sx={{
-												fontSize: '0.9rem',
-												padding: '0.3rem 0.4rem',
-												borderRadius: '10px',
-												backgroundColor: '#898967',
-											}}
-										>
-											{vehicle.name}
-										</Box>
-									</Box>
-
-									<Button
-										variant='contained'
-										size='small'
-										color='warning'
-										onClick={() => {
-											setVehicleNumber(
-												vehicle.vehicleNumber
-											);
-											setVehicleId(vehicle.vehicle_id);
-											setFrom(vehicle.driver_id);
-											handleOpenTransfer();
-										}}
-									>
-										<SyncAltIcon /> Transfer
-									</Button>
-								</Box>
-							</Box>
-						</>
+						<AssignList
+							key={index}
+							vehicle={vehicle}
+							setVehicleNumber={setVehicleNumber}
+							setFrom={setFrom}
+							handleOpenTransfer={handleOpenTransfer}
+						/>
 					);
 				})}
 			</Box>
